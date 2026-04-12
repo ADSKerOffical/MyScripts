@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<body style="background-color: black">
+  <p id="clock" style="color: white; font-family: monospace; font-size: 50px; text-align: center">00:00:00</p>
+  <script>
+     const intervalId = setInterval(() => {
+       document.getElementById("clock").textContent = new Date().toLocaleTimeString()
+     }, 1000);
+  </script>
+</body>
