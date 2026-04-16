@@ -1,6 +1,6 @@
 def hasModule(name):
   try:
-    module = __import__(name)
+    import name
   except ModuleNotFoundError:
     return False
   else:
