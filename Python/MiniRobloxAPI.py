@@ -76,3 +76,6 @@ module.debug = debug
 __import__("sys").modules["RBXApi"] =  module
 
 # it only for runtime
+# exec(__import__("requests").get("https://raw.githubusercontent.com/ADSKerOffical/MyScripts/refs/heads/main/Python/MiniRobloxAPI.py").text)
+# from RBXApi import game
+# print(game.GetService("HttpService").GetAsync("https://httpbin.org/get"))
