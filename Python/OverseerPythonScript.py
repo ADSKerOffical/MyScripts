@@ -9,7 +9,7 @@ if len(sys.argv) == 3:
     try:
        hsot = str(socket.gethostbyaddr(arg)[0])
     except Exception as en:
-       print(en)
+       pass
 
     print("Информацию об айпи адресе " + arg + ": ")
     print(f"   Является приватным: {"да" if ip.is_private == True else "нет"}")
@@ -33,7 +33,7 @@ if len(sys.argv) == 3:
       Тип провайдера: {response["type"]}
        """
     except Exception as am:
-       print(am)
+       pass
     
     try:
        req = http.client.HTTPSConnection(arg)
@@ -41,7 +41,7 @@ if len(sys.argv) == 3:
        server = req.getresponse().getheader("Server")
        req.close()
     except Exception as am:
-       print(am)
+       pass
     
     print("Информация об домене " + arg + ": ")
     print(f"   Айпи адрес сайта: {amam}")
@@ -49,3 +49,5 @@ if len(sys.argv) == 3:
     print(f"   CIDR: {ipaddress.ip_network(amam).supernet()}")
     print(f"   Сервер: {server}")
     print(asninfo)
+  elif mode == "self":
+    pass
