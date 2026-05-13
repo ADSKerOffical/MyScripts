@@ -7,7 +7,7 @@ if len(sys.argv) == 3:
     ipinfo = http.client.HTTPSConnection("ipinfo.io"); ipinfo.request("GET", "/json"); ipinfo = json.loads(ipinfo.getresponse().read())
     
     try:
-       hsot = str(socket.gethostbyaddr(ip)[0])
+       hsot = str(socket.gethostbyaddr(arg)[0])
     except Exception as en:
        print(en)
 
