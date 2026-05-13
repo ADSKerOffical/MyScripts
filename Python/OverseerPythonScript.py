@@ -4,7 +4,7 @@ if len(sys.argv) == 3:
 
   if mode == "ip" or mode == "ipaddress":
     ip, hsot = ipaddress.ip_address(arg), None
-    ipinfo = http.client.HTTPSConnection("ipinfo.io"); ipinfo.request("GET", "/json"); ipinfo = json.loads(ipinfo.getresponse().read())
+    ipinfo = http.client.HTTPSConnection("ipinfo.io"); ipinfo.request("GET", f"/{arg}/json"); ipinfo = json.loads(ipinfo.getresponse().read())
     
     try:
        hsot = str(socket.gethostbyaddr(arg)[0])
@@ -26,7 +26,7 @@ if len(sys.argv) == 3:
     
     try:
        req = http.client.HTTPSConnection("rdap.db.ripe.net")
-       req.request("GET", f"/ip/{arg}")
+       req.request("GET", f"/ip/{amam}")
        response = json.loads(req.getresponse().read())
        asninfo = f"""
       Имя провайдера: {response["name"]}
