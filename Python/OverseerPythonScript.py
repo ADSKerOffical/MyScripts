@@ -17,7 +17,7 @@ if len(sys.argv) == 3:
     print(f"   Предполагаемое местоположение: {"city" in ipinfo and (ipinfo["country"] + " " + ipinfo["city"] + " " + ipinfo["region"]) or "не известно"}")
     print(f"   ASN: {"org" in ipinfo and ipinfo["org"] or "не найдено"}")
     print(f"   Локация: {"loc" in ipinfo and ipinfo["loc"] or "не найдено"}")
-    print(f"   Имеет домен: {hsot != None and "да (" + hsot + ")" or "нет"}
+    print(f"   Имеет домен: {hsot != None and "да (" + hsot + ")" or "нет"}")
     print(f"   CGNAT: {ip._constants._public_network}")
     print(f"   LLA: {ip._constants._linklocal_network}")
     
@@ -28,7 +28,7 @@ if len(sys.argv) == 3:
        req = http.client.HTTPSConnection("rdap.db.ripe.net")
        req.request("GET", f"/ip/{arg}")
        response = json.loads(req.getresponse().read())
-       asninfo = f""'
+       asninfo = f"""
       Имя провайдера: {response["name"]}
       Тип провайдера: {response["type"]}
        """
