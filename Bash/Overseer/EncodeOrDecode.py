@@ -7,8 +7,11 @@ decrypt = (len(sys.argv) >= 3 and sys.argv[3].lower() == "true" and True) or Fal
 rs = ""
 
 if os.path.isfile(stri):
-    with open(stri, "r") as f:
-        stri = f.read().strip()
+    if input("Это файл. Использовать как текст или как содержимое в файле? (введи y если да и n если нет)").lower() == "y":
+      with open(stri, "r") as f:
+          stri = f.read().strip()
+    else:
+       pass
 
 def save(text):
   if saveToFile is None or (type(saveToFile) is str and not saveToFile.strip()):
@@ -27,11 +30,6 @@ elif method == "bytes" or method == "ascii":
            rs = stri.encode("utf-8", errors="ignore")
     else:
            rs = stri.encode("ascii")
-elif method == "decimal_bytes":
-    if decrypt == True:
-           rs = re.sub(r'\\(\d{1,3})', lambda m: chr(int(m.group(1))), stri)
-    else:
-           rs = ''.join(f'\\{ord(c)}' for c in stri)
 elif method == "base64" or method == "b64":
     if decrypt == True:
            rs = base64.b64decode(stri).decode("utf-8")
