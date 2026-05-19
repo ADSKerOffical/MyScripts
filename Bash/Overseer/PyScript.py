@@ -59,7 +59,7 @@ if len(sys.argv) == 3:
              newinfo["subject"] = peer.get("subject")
              newinfo["issuer"] = peer.get("issuer")
     except Exception as am:
-       pass
+       print(am)
     
     print("Информация об домене " + arg + ": ")
     print(f"   Айпи адрес сайта: {amam}")
@@ -73,5 +73,7 @@ if len(sys.argv) == 3:
        print(f"   Шифр: {newinfo["cipher"]}")
        print(f"   Субъект: {newinfo["subject"]}")
        print(f"   Издатель: {newinfo["issuer"]}")
+    else:
+       print("Not found")
     
     print(asninfo)
