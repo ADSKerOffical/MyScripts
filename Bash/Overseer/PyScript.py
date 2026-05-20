@@ -67,7 +67,7 @@ if len(sys.argv) == 3:
     print(f"   CIDR: {ipaddress.ip_network(amam).supernet()}")
     print(f"   Сервер: {server}")
     
-    if newinfo ~= {}:
+    if newinfo:
        print(f"   Версия сокета: {newinfo["s_ver"]}")
        print(f"   ALPN: {newinfo["alpn"] is None and "не обнаружено" or newinfo["alpn"]}")
        print(f"   Шифр: {newinfo["cipher"]}")
