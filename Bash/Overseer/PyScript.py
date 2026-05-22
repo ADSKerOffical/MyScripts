@@ -83,7 +83,7 @@ if len(sys.argv) >= 3:
      if pnumber[:1] != "+":
         pnumber = "+" + pnumber
      
-     phonenumber = phonenumbers.parse(arg)
+     phonenumber = phonenumbers.parse(pnumber)
      
      print(f"Информацию о номере телефона {pnumber}:")
      print(f"   Оператор: {carrier.name_for_number(phonenumber, "ru")}")
