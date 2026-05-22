@@ -75,9 +75,9 @@ if len(sys.argv) >= 3:
     else:
        print("Not found")
     print(asninfo)
-  elseif mode == "pnumber":
+  elif mode == "pnumber":
      import phonenumbers
-     from phonenumbers import geocoder, carrier
+     from phonenumbers import geocoder, carrier, PhoneNumberType
      pnumber = arg.translate(str.maketrans("", "", "()- "))
      
      if pnumber[:1] != "+":
@@ -85,4 +85,7 @@ if len(sys.argv) >= 3:
      
      phonenumber = phonenumbers.parse(arg)
      
-     print(dir(phonenumber))
+     print(f"Информацию о номере телефона {pnumber}:")
+     print(f"   Оператор: {carrier.name_for_number(phonenumber, "ru")}")
+     print(f"   Страна: {geocoder.description_for_number(pnumber, "ru")}")
+     print(f"   Тип номера: {PhoneNumberType.to_string(phonenumbers.number_type(phonenumber))}")
