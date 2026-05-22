@@ -87,5 +87,5 @@ if len(sys.argv) >= 3:
      
      print(f"Информацию о номере телефона {pnumber}:")
      print(f"   Оператор: {carrier.name_for_number(phonenumber, "ru")}")
-     print(f"   Страна: {geocoder.description_for_number(pnumber, "ru")}")
+     print(f"   Страна: {geocoder.description_for_number(phonenumber, "ru")}")
      print(f"   Тип номера: {PhoneNumberType.to_string(phonenumbers.number_type(phonenumber))}")
