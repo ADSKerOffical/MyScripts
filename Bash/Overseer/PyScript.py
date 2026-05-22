@@ -1,5 +1,5 @@
 import sys, os, http.client, ipaddress, json, socket, ssl
-if len(sys.argv) == 3:
+if len(sys.argv) >= 3:
   arg, mode = sys.argv[1], sys.argv[2]
 
   if mode == "ip" or mode == "ipaddress":
@@ -18,8 +18,7 @@ if len(sys.argv) == 3:
     print(f"   ASN: {"org" in ipinfo and ipinfo["org"] or "не найдено"}")
     print(f"   Локация: {"loc" in ipinfo and ipinfo["loc"] or "не найдено"}")
     print(f"   Имеет домен: {hsot != None and "да (" + hsot + ")" or "нет"}")
-    print(f"   CGNAT: {ip._constants._public_network}")
-    print(f"   LLA: {ip._constants._linklocal_network}")
+    print(f"   PTR: {"reverse_pointer" in ip and ip.reverse_pointer or "не найдено"}")
     
   elif mode == "domain" or mode == "host":
     amam, server, asninfo = socket.gethostbyname(arg), None, ""
@@ -75,5 +74,15 @@ if len(sys.argv) == 3:
        print(f"   Издатель: {newinfo["issuer"]}")
     else:
        print("Not found")
-    
     print(asninfo)
+  elseif mode == "pnumber":
+     import phonenumbers
+     from phonenumbers import geocoder, carrier
+     pnumber = arg.translate(str.maketrans("", "", "()- "))
+     
+     if pnumber[:1] != "+":
+        pnumber = "+" + pnumber
+     
+     phonenumber = phonenumbers.parse(arg)
+     
+     print(dir(phonenumber))
