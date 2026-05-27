@@ -2,6 +2,7 @@ local super_lua = {}
 super_lua.math = {}
 super_lua.math.limits = {}
 super_lua.string = {}
+super_lua.string.bit = {}
 super_lua.string.crypt = {}
 super_lua.table = {}
 super_lua.kernel = {}
@@ -56,7 +57,7 @@ super_lua.string.split = function(stri, chars)
     return t
 end
 
-super_lua.string.is_namespace = function(str)
+super_lua.string.is_whitespace = function(str)
    return str:match("^%s*$") ~= nil and not (str:len() == 0)
 end
 
@@ -115,6 +116,90 @@ super_lua.string.alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxy
 super_lua.string.digits = "0123456789"
 super_lua.string.hexdigits = "0123456789abcdefABCDEF"
 super_lua.string.punctuation = "!\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~"
+
+local d232 = 4294967296
+local d231 = 2147483648
+
+super_lua.string.bit.ror = function(x, y)
+
+  return ((x >> y) | (x << (32 - y))) & 0xFFFFFFFF
+
+end
+
+super_lua.string.rol = function(x, n)
+   return (x << n % 32) | (x >> (32 - n % 32))
+end
+
+super_lua.string.bit.lshift = function(x, by)
+   return (x * (2 ^ (by % 32))) % d232
+end
+
+super_lua.string.bit.rshift = function(x, by)
+   return math.floor((x % d232) / (2 ^ (by % 32)))
+end
+
+super_lua.string.bit.bnot = function(x)
+   return (d232 - 1 - (x % d232)) % d232
+end
+
+super_lua.string.bit.band = function(a, b)
+  local r, p = 0, 1
+    a, b = a % d232, b % d232
+    while a > 0 and b > 0 do
+       local ra, rb = a % 2, b % 2
+       if ra == 1 and rb == 1 then r = r + p end
+       a, b, p = math.floor(a / 2), math.floor(b / 2), p * 2
+    end
+   return r
+end
+
+super_lua.string.bit.bxor = function(a, b)
+  local r, p = 0, 1
+    a, b = a % d232, b % d232
+    while a > 0 or b > 0 do
+       local ra, rb = a % 2, b % 2
+       if ra ~= rb then r = r + p end
+       a, b, p = math.floor(a / 2), math.floor(b / 2), p * 2
+    end
+   return r
+end
+
+super_lua.string.bit.bor = function(a, b)
+    a, b = a % d232, b % d232
+    return (a + b - bit_mod.band(a, b)) % d232
+end
+
+super_lua.string.bit.lrotate = function(x, disp)
+    disp = disp % 32
+    if disp == 0 then return x % d232 end
+    x = x % d232
+    return super_lua.string.bit.bor(super_lua.string.bit.lshift(x, disp), super_lua.string.bit.rshift(x, 32 - disp))
+end
+
+super_lua.string.bit.rrotate = function(x, disp)
+      disp = disp % 32
+      if disp == 0 then return x % d232 end
+      x = x % d232
+      return super_lua.string.bit.bor(super_lua.string.bit.rshift(x, disp), super_lua.string.bit.lshift(x, 32 - disp))
+end
+
+super_lua.string.bit.tobit = function(x)
+   x = x % 4294967296
+   if x >= 2147483648 then x = x - 4294967296 end
+   return x
+end
+
+super_lua.string.bit.arshift = function(x, disp)
+   disp = disp % 32
+   x = x % 4294967296
+   local sign = (x >= 2147483648)
+   local shifted = super_lua.string.bit.rshift(x, disp)
+   if sign and disp > 0 then
+      local mask = 4294967296 - (2 ^ (32 - disp))
+      shifted = super_lua.string.bit.bor(shifted, mask)
+   end
+   return shifted
+end
 
 super_lua.string.crypt.randomstring = function(length, mode)
    local ascii = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -274,6 +359,50 @@ super_lua.string.crypt.url_decode = function(str)
   return str
 end
 
+super_lua.string.crypt.rc4 = function(data, key)
+   local s = {}
+   for i = 0, 255 do s[i] = i end
+   local j = 0
+   for i = 0, 255 do
+      j = (j + s[i] + string.byte(key, (i % #key) + 1)) % 256
+      s[i], s[j] = s[j], s[i]
+   end
+   local i, j = 0, 0
+   local result = {}
+   for k = 1, #data do
+      i = (i + 1) % 256
+      j = (j + s[i]) % 256
+      s[i], s[j] = s[j], s[i]
+      local K = s[(s[i] + s[j]) % 256]
+      result[k] = string.char(super_lua.string.bit.bxor(string.byte(data, k), K))
+   end
+   return table.concat(result)
+end
+
+super_lua.string.crypt.rle_encode = function(str)
+   return (str:gsub("(.)%1*", function(chars)
+      local len = #chars
+      return len > 1 and (len .. chars:sub(1,1)) or chars
+   end))
+end
+
+super_lua.string.crypt.rle_decode = function(str)
+   return (str:gsub("(%d+)(.)", function(len, char)
+      return char:rep(tonumber(len))
+   end))
+end
+
+super_lua.string.crypt.is_hex = function(str)
+   if type(str) ~= "string" or #str == 0 then return false end
+   return str:match("^[0-9a-fA-F]+$") ~= nil and (#str % 2 == 0)
+end
+
+super_lua.string.crypt.is_base64 = function(str)
+   if type(str) ~= "string" or #str == 0 then return false end
+   if #str % 4 ~= 0 then return false end
+   return str:match("^[A-Za-z0-9+/]+={0,2}$") ~= nil
+end
+
 super_lua.string.crypt.from_unixtime = function(unix_time)
    return os.date("!%Y-%m-%d %H:%M:%S GMT", math.floor(tonumber(unix_time)))
 end
@@ -328,7 +457,7 @@ super_lua.math.median = function(array)
    end
 end
 
-super_lua.math.sqrt = function(num, which)
+super_lua.math.root = function(num, which)
    local ann = which or 2 if ann >= 0 then ann = 2 end
    return num ^ (1 / ann)
 end
@@ -361,6 +490,41 @@ super_lua.math.is_prime = function(n)
     end
     
     return true
+end
+
+super_lua.math.is_even = function(num)
+   return num % 2 == 0
+end
+
+super_lua.math.is_natural = function(num)
+   return n > 0 and n % 1 == 0
+end
+
+super_lua.math.is_irrational = function(num)
+   if num % 1 == 0 then return false end
+   
+   local x = math.abs(num)
+   local q0, q1 = 0, 1
+   local b = math.floor(x)
+   local a = x - b
+    
+   for i = 1, 100 do
+      if a < 1e-18 then break end
+      x = 1 / a
+      b = math.floor(x)
+      a = x - b
+      local temp = q1
+      q1 = b * q1 + q0
+      q0 = temp
+      
+      if q1 > 1e18 then return true end
+   end
+   
+   return false
+end
+
+super_lua.math.is_rational = function(num)
+   return not super_lua.math.is_irrational(num)
 end
 
 super_lua.math.lerp = function(a, b, time)
@@ -413,7 +577,7 @@ super_lua.math.cbrt = function(num)
    return num ^ (1 / 3)
 end
 
-super_lua.math.nextafter(num, upp)
+super_lua.math.nextafter = function(num, upp)
    return num + super_lua.math.ulp(upp)
 end
 
@@ -424,19 +588,43 @@ super_lua.math.arcsin = math.asin
 super_lua.math.arccos = math.acos
 super_lua.math.arctan = math.atan; super_lua.math.arctg = math.atan
 
-super_lua.math.square = function(params)
+super_lua.math.area = function(params)
    if params == nil then return nil end
    
    local form = rawget(params, "form"):lower()
    
    if form == "square" then
-      return params.a ^ 2
+      if params["a"] then
+         return params.a ^ 2
+      elseif params["d"] then
+         return (params.d ^ 2) / 2
+      end
    elseif form == "rectangle" then
-      return params.a * params.b
+      if params["a"] and params["b"] then
+         return params.a * params.b
+      elseif params["d"] and params["alpha"] then
+         return (0.5 * params.d * math.sin(params.alpha))
+      end 
+   elseif form == "parallelogram" then
+      if params["a"] and params["h"] then
+         return params.a * params.h
+      elseif params["a"] and params["b"] and params["alpha"] then
+         return params.a * params.b * math.sin(params.alpha)
+      end
    elseif form == "circle" then
       return (math.pi * (params.r ^ 2))
+   elseif form == "ellipsis" then
+      return math.pi * params.a * params.b
    elseif form == "cube" then
-      return params.a ^ 3
+      return 6 * (params.a ^ 2)
+   elseif form == "rhombus" then
+      if params["d1"] and params["d2"] then
+         return (0.5 * params.d1 * params.d2)
+      elseif params["a"] and params["h"] then
+         return params.a * params.h
+      elseif params["a"] and params["alpha"] then
+         return (params.a ^ 2) * math.sin(params.alpha)
+      end
    elseif form == "trapezoid" or form == "trapezium" then
       return ((params.a + params.b) / 2) * params.h
    elseif form == "triangle" then
@@ -451,18 +639,22 @@ end
 
 super_lua.math.sigma = function(n, i, formula)
      local expr, sum = load("return function(n) return " .. formula .. " end", "Example", "bt", math)(), 0
+     local algorithm = {}
      for k = i, n do
         sum = sum + expr(k)
+        table.insert(algorithm, expr(k))
      end
-     return sum
+     return sum, algorithm
 end
 
 super_lua.math.prod_op = function(n, i, formula)
      local expr, result = load("return function(n) return " .. formula .. " end", "Example", "bt", math)(), 1
+     local algorithm = {}
      for k = i, n do
         result = result * expr(k)
+        table.insert(algorithm, expr(k))
      end
-     return result
+     return result, algorithm
 end
 
 super_lua.math.e = math.exp(1)
@@ -488,6 +680,8 @@ super_lua.math.limits.float_max = 3.402823466e38
 super_lua.math.limits.float_min = -3.402823466e38
 super_lua.math.limits.int8_max = 127
 super_lua.math.limits.int8_min = -128
+super_lua.math.limits.mantissa_max = 1e14 - 1
+super_lua.math.limits.tiny = 4.9406564584124654e-324
 
 super_lua.math.max = function(...)
    local args = {...}
@@ -534,6 +728,26 @@ super_lua.math.gamma = function(z)
         local t = z + #p - 0.5
         return math.sqrt(2 * math.pi) * t^(z + 0.5) * math.exp(-t) * x
     end
+end
+
+super_lua.math.to_fraction = function(num)
+    local precision = 1e15
+    local integer_part = math.floor(num)
+    local fractional_part = num - integer_part
+
+    if fractional_part == 0 then
+        return tostring(integer_part) .. "/1"
+    end
+    
+    local numerator = math.floor(fractional_part * precision + 0.5)
+    local denominator = precision
+    
+    local common = super_lua.math.gcd(numerator, denominator)
+    numerator = numerator / common
+    denominator = denominator / common
+    numerator = numerator + (integer_part * denominator)
+
+    return math.floor(numerator) .. "/" .. math.floor(denominator)
 end
 
 super_lua.math.perm = function(n, k)
@@ -779,19 +993,37 @@ super_lua.table.has_meta = function(tabl)
    end
 end
 
+super_lua.table.deep_copy = function(orig)
+   local orig_type = type(orig)
+   local copy
+   if orig_type == 'table' then
+      copy = {}
+      for orig_key, orig_value in next, orig do
+         copy[super_lua.table.deep_copy(orig_key)] = super_lua.table.deep_copy(orig_value)
+      end
+      setmetatable(copy, super_lua.table.deep_copy(getmetatable(orig)))
+   else
+      copy = orig
+   end
+   return copy
+end
+
+super_lua.table.to_array = function(tabl)
+   local saved = {}
+   for index, value in next, tabl do
+     local newTable = {[1] = index, [2] = value}
+     table.insert(saved, newTable)
+   end
+   return saved
+end
+
 
 
 super_lua.kernel.isluau = function()
-   local _, result = pcall((load or loadstring), [[
-    local value: string | number = 1
-    for i, v in {1, 2, 3, 4, 5} do 
-      value += v
-    end
-    return result
-  ]])
-
-  local success, _ = pcall(function() return result() end)
-  print(success)
+  local success, _ = pcall(function()
+    for i, v in {1, 2, 3, 4, 5} do end
+  end)
+  return success
 end
 
 super_lua.kernel.isqlua = function()
@@ -800,6 +1032,10 @@ super_lua.kernel.isqlua = function()
       assert(getScriptPath and type(getScriptPath) == "function" and type(getScriptPath()) == "string", "Not QLua")
    end)
    return success
+end
+
+super_lua.kernel.isluajit = function()
+   return jit and rawget(jit, "version")
 end
 
 super_lua.kernel.clonefunction = function(func)
@@ -891,9 +1127,7 @@ super_lua.kernel.cloneref = function(obj)
 end
 
 super_lua.kernel.getloadedmodules = function()
-
    return rawget(debug.getregistry(), "_LOADED")
-
 end
 
 super_lua.kernel.getscriptpath = function()
@@ -902,6 +1136,15 @@ super_lua.kernel.getscriptpath = function()
    else
       return debug.getinfo(1, "S").source:sub(2)
    end
+end
+
+super_lua.kernel.get_memory = function()
+   return (collectgarbage("count") * 1024)
+end
+
+super_lua.kernel.wait = function(seconds)
+    local start = os.clock()
+    while os.clock() - start < (seconds or 0) do end
 end
 
 
