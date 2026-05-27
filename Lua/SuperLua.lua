@@ -4,7 +4,9 @@ super_lua.math.limits = {}
 super_lua.string = {}
 super_lua.string.bit = {}
 super_lua.string.crypt = {}
+super_lua.file_manager = {}
 super_lua.table = {}
+super_lua.http = {}
 super_lua.kernel = {}
 
 
@@ -19,7 +21,7 @@ super_lua._PRELOAD = function(moduleName)
          return package.loaded[moduleName]
       end
     else
-      return _G[moduleName]
+      return _G[moduleName] or {}
    end
 end
 
@@ -44,6 +46,7 @@ end
 super_lua._EXPORT(math, super_lua.math)
 super_lua._EXPORT(string, super_lua.string)
 super_lua._EXPORT(table, super_lua.table)
+super_lua._EXPORT(io or {}, super_lua.file_manager)
 
 super_lua.string.split = function(stri, chars)
    if chars == nil then
@@ -121,9 +124,7 @@ local d232 = 4294967296
 local d231 = 2147483648
 
 super_lua.string.bit.ror = function(x, y)
-
   return ((x >> y) | (x << (32 - y))) & 0xFFFFFFFF
-
 end
 
 super_lua.string.rol = function(x, n)
@@ -234,12 +235,28 @@ super_lua.string.crypt.randomstring = function(length, mode)
    return rndstr
 end
 
-super_lua.string.crypt.to_ascii = function(text)
+super_lua.string.crypt.to_decimal = function(text)
    return "\\"..table.concat({string.byte(text, 1, #text)}, "\\")
 end
 
-super_lua.string.crypt.from_ascii = function(text)
+super_lua.string.crypt.from_decimal = function(text)
    return text -- bytes are automatically compiled using return
+end
+
+super_lua.string.crypt.to_octal = function(str)
+    local result = {}
+    result[1] = ("\\"):gsub("\\", "")
+    for i = 1, #str do
+        local byte = string.byte(str:sub(i, i))
+        table.insert(result, string.format("%03o", byte))
+    end
+    return table.concat(result, "\\")
+end
+
+super_lua.string.crypt.from_octal =function(str)
+    return (str:gsub("\\(%d%d%d)", function(octal)
+        return string.char(tonumber(octal, 8))
+    end))
 end
 
 super_lua.string.crypt.to_hex = function(text)
@@ -321,7 +338,7 @@ super_lua.string.crypt.base64_decode = function(s)
     return table.concat(out)
 end
 
-super_lua.string.crypt.hash_adler32 = function(text)
+super_lua.string.crypt.adler32 = function(text)
    local a, b = 1, 0
    for i = 1, #text do
        a = (a + string.byte(text, i)) % 65521
@@ -341,6 +358,18 @@ super_lua.string.crypt.rot13 = function(text)
     end))
 end
 
+super_lua.string.crypt.rot47 = function(str)
+    local result = ""
+    for i = 1, #str do
+        local byte = string.byte(str, i)
+        if byte >= 33 and byte <= 126 then
+            byte = ((byte - 33 + 47) % 94) + 33
+        end
+        result = result .. string.char(byte)
+    end
+    return result
+end
+
 super_lua.string.crypt.url_encode = function(str)
     str = string.gsub(str, "\n", "\r\n")
     str = string.gsub(str, "([^%w %-%_%.%~])", function(c)
@@ -357,6 +386,157 @@ super_lua.string.crypt.url_decode = function(str)
   end)
   
   return str
+end
+
+super_lua.string.crypt.entropy = function(text)
+   if type(text) ~= "string" or #text == 0 then
+      return 0
+   end
+
+   local counts = {}
+   local total_bytes = 0
+  
+   for i = 1, #text do
+      local byte_val = string.byte(text, i)
+      counts[byte_val] = (counts[byte_val] or 0) + 1
+      total_bytes = total_bytes + 1
+   end
+
+   if total_bytes == 0 then
+      return 0, "Input string is empty after byte conversion"
+   end
+  
+   local entropy_value = 0
+   for byte_val, count in pairs(counts) do
+      local probability = count / total_bytes
+      entropy_value = entropy_value - (probability * (math.log(probability) / math.log(2)))
+   end
+  
+   return entropy_value
+end
+
+super_lua.string.crypt.sha256 = function(message)
+  local bit_ror = super_lua.string.bit.ror
+  local k = {
+      0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+      0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+      0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+      0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+      0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+      0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+      0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+      0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+  }
+
+  local function preprocess(message)
+      local len = #message
+      local bitLen = len * 8
+      message = message .. "\128"
+
+      local zeroPad = 64 - ((len + 9) % 64)
+      if zeroPad ~= 64 then
+          message = message .. string.rep("\0", zeroPad)
+      end
+    
+      message = message .. string.char(
+          bitLen >> 56 & 0xFF,
+          bitLen >> 48 & 0xFF,
+          bitLen >> 40 & 0xFF,
+          bitLen >> 32 & 0xFF,
+          bitLen >> 24 & 0xFF,
+          bitLen >> 16 & 0xFF,
+          bitLen >> 8 & 0xFF,
+          bitLen & 0xFF
+      )
+
+      return message
+  end
+
+  local function chunkify(message)
+      local chunks = {}
+      for i = 1, #message, 64 do
+          table.insert(chunks, message:sub(i, i + 63))
+      end
+      return chunks
+  end
+
+  local function processChunk(chunk, hash)
+      local w = {}
+
+      for i = 1, 64 do
+          if i <= 16 then
+              w[i] = string.byte(chunk, (i - 1) * 4 + 1) << 24 |
+                     string.byte(chunk, (i - 1) * 4 + 2) << 16 |
+                     string.byte(chunk, (i - 1) * 4 + 3) << 8 |
+                     string.byte(chunk, (i - 1) * 4 + 4)
+          else
+              local s0 = bit_ror(w[i - 15], 7) ~ bit_ror(w[i - 15], 18) ~ (w[i - 15] >> 3)
+              local s1 = bit_ror(w[i - 2], 17) ~ bit_ror(w[i - 2], 19) ~ (w[i - 2] >> 10)
+              w[i] = (w[i - 16] + s0 + w[i - 7] + s1) & 0xFFFFFFFF
+          end
+      end
+
+      local a, b, c, d, e, f, g, h = table.unpack(hash)
+
+      for i = 1, 64 do
+          local s1 = bit_ror(e, 6) ~ bit_ror(e, 11) ~ bit_ror(e, 25)
+          local ch = (e & f) ~ ((~e) & g)
+          local temp1 = (h + s1 + ch + k[i] + w[i]) & 0xFFFFFFFF
+          local s0 = bit_ror(a, 2) ~ bit_ror(a, 13) ~ bit_ror(a, 22)
+          local maj = (a & b) ~ (a & c) ~ (b & c)
+          local temp2 = (s0 + maj) & 0xFFFFFFFF
+
+          h = g
+          g = f
+          f = e
+          e = (d + temp1) & 0xFFFFFFFF
+          d = c
+          c = b
+          b = a
+          a = (temp1 + temp2) & 0xFFFFFFFF
+      end
+
+      return (hash[1] + a) & 0xFFFFFFFF,
+             (hash[2] + b) & 0xFFFFFFFF,
+             (hash[3] + c) & 0xFFFFFFFF,
+             (hash[4] + d) & 0xFFFFFFFF,
+             (hash[5] + e) & 0xFFFFFFFF,
+             (hash[6] + f) & 0xFFFFFFFF,
+             (hash[7] + g) & 0xFFFFFFFF,
+             (hash[8] + h) & 0xFFFFFFFF
+  end
+
+  message = preprocess(message)
+  local chunks = chunkify(message)
+
+  local hash = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19}
+  for _, chunk in ipairs(chunks) do
+      hash = {processChunk(chunk, hash)}
+  end
+
+  local result = ""
+  for _, h in ipairs(hash) do
+      result = result .. string.format("%08x", h)
+  end
+
+  return result
+end
+
+super_lua.string.crypt.to_binary = function(str)
+  return (str:gsub(".", function(c)
+      local byte = string.byte(c)
+      local bits = ""
+      for i = 7, 0, -1 do
+          bits = bits .. (math.floor(byte / 2^i) % 2)
+      end
+     return bits .. " "
+  end))
+end
+
+super_lua.string.crypt.from_binary = function(str)
+   return str:gsub("(%d%d%d%d%d%d%d%d)%s*", function(b)
+     return string.char(tonumber(b, 2))
+  end)
 end
 
 super_lua.string.crypt.rc4 = function(data, key)
@@ -1019,6 +1199,257 @@ end
 
 
 
+super_lua.file_manager.read = function(path)
+   local file = io.open(path, "r")
+   local src = file:read("*a"):gsub("\n$", "")
+   file:close()
+   
+   return src
+end
+
+super_lua.file_manager.write = function(path, text)
+   local file = io.open(path, "w")
+   file:write(text or "")
+   return file:close()
+end
+
+super_lua.file_manager.append = function(path, text)
+   local file = io.open(path, "a")
+   file:write(text or "")
+   return file:close()
+end
+
+super_lua.file_manager.isfile = function(path)
+  local _, result = pcall(function()
+    local a = io.popen("stat -c %F " .. path .. " 2>/dev/null")
+    local b = a:read("*a"):gsub("\n$", "")
+    a:close()
+  
+    return b:find("file") ~= nil
+  end)
+  
+  return result
+end
+
+super_lua.file_manager.isexist = function(path)
+   local success, _ = pcall(function()
+      io.open(path, "r"):close()
+   end)
+   
+   return success
+end
+
+super_lua.file_manager.delfile = function(path)
+   os.remove(path)
+end
+
+super_lua.file_manager.makefolder = function(path)
+   os.execute("mkdir " .. path)
+end
+
+super_lua.file_manager.isfolder = function(path)
+  local _, result = pcall(function()
+    local a = io.popen("stat -c %F " .. path .. " 2>/dev/null")
+    local b = a:read("*a"):gsub("\n$", "")
+    a:close()
+  
+    return b == "directory"
+  end)
+  
+  return result
+end
+
+super_lua.file_manager.delfolder = function(path)
+   os.execute("rm -rf " .. path)
+end
+
+super_lua.file_manager.getinfo = function(path)
+   if not super_lua.file_manager.isfile(path) then
+      return {}, "Only files allowed or this path not exist"
+   end
+   
+   return {
+   	["owner"] = super_lua.kernel.run_bash("stat -c %U " .. path),
+       ["type"] = super_lua.kernel.run_bash("stat -c %F " .. path)
+   }
+end
+
+
+
+super_lua.http.get = function(url)
+   local res = io.popen("curl -s " .. url)
+   local body = res:read("*a"):gsub("\n$", "")
+   res:close()
+   
+   return body
+end
+
+super_lua.http.request = function(options)
+   if type(options) == "string" then
+      options = { url = options, method = "GET" }
+   end
+   
+   local url = options.url or options.Url
+   local method = ((options.method or options.Method) or "GET"):upper()
+   local headers = (options.headers or options.Headers) or {}
+   local body = (options.body or options.Body) or ""
+   
+   if not url then return nil, "URL is required" end
+   local cmd = {"curl", "-s", "-X", method}
+   
+   for k, v in pairs(headers) do
+      table.insert(cmd, string.format('-H "%s: %s"', k, v))
+   end
+   
+   if body ~= "" then
+      local safe_body = body:gsub('"', '\\"')
+      table.insert(cmd, string.format('-d "%s"', safe_body))
+   end
+   
+   table.insert(cmd, string.format('"%s"', url))
+   
+   local run_cmd = table.concat(cmd, " ")
+   
+   local file = io.popen(run_cmd)
+   if not file then return nil, "Failed to execute curl" end
+   local response = file:read("*a")
+   file:close()
+   
+   return response
+end
+
+super_lua.http.json_decode = function(str)
+   local pos = 1
+   
+   local function skip_whitespace()
+      while pos <= #str do
+         local char = str:sub(pos, pos)
+         if char == " " or char == "\t" or char == "\n" or char == "\r" then
+            pos = pos + 1
+         else
+            break
+         end
+      end
+   end
+   
+   local parse_value
+   local function parse_string()
+      pos = pos + 1
+      local start = pos
+      while pos <= #str do
+         local char = str:sub(pos, pos)
+         if char == '"' then
+            local res = str:sub(start, pos - 1)
+            pos = pos + 1
+            return res
+         elseif char == '\\' then
+            pos = pos + 2
+         else
+            pos = pos + 1
+         end
+      end
+      error("Expected end of string in JSON")
+   end
+   
+   local function parse_number()
+      local start = pos
+      while pos <= #str do
+         local char = str:sub(pos, pos)
+         if char:match("[%d%.%-eE%+]") then
+            pos = pos + 1
+         else
+            break
+         end
+      end
+      return tonumber(str:sub(start, pos - 1))
+   end
+   
+   local function parse_object()
+      pos = pos + 1
+      local obj = {}
+      skip_whitespace()
+      if str:sub(pos, pos) == '}' then
+         pos = pos + 1
+         return obj
+      end
+      while true do
+         skip_whitespace()
+         if str:sub(pos, pos) ~= '"' then error("Expected string key in JSON object") end
+         local key = parse_string()
+         skip_whitespace()
+         if str:sub(pos, pos) ~= ':' then error("Expected ':' after key in JSON object") end
+         pos = pos + 1
+         obj[key] = parse_value()
+         skip_whitespace()
+         local next_char = str:sub(pos, pos)
+         if next_char == '}' then
+            pos = pos + 1
+            return obj
+         elseif next_char == ',' then
+            pos = pos + 1
+         else
+            error("Expected ',' or '}' in JSON object")
+         end
+      end
+   end
+   
+   local function parse_array()
+      pos = pos + 1
+      local arr = {}
+      skip_whitespace()
+      if str:sub(pos, pos) == ']' then
+         pos = pos + 1
+         return arr
+      end
+      while true do
+         table.insert(arr, parse_value())
+         skip_whitespace()
+         local next_char = str:sub(pos, pos)
+         if next_char == ']' then
+            pos = pos + 1
+            return arr
+         elseif next_char == ',' then
+            pos = pos + 1
+         else
+            error("Expected ',' or ']' in JSON array")
+         end
+      end
+   end
+   
+   parse_value = function()
+      skip_whitespace()
+      local char = str:sub(pos, pos)
+      if char == '{' then
+         return parse_object()
+      elseif char == '[' then
+         return parse_array()
+      elseif char == '"' then
+         return parse_string()
+      elseif char:match("[%d%-]") then
+         return parse_number()
+      elseif str:sub(pos, pos + 3) == "true" then
+         pos = pos + 4
+         return true
+      elseif str:sub(pos, pos + 4) == "false" then
+         pos = pos + 5
+         return false
+      elseif str:sub(pos, pos + 3) == "null" then
+         pos = pos + 4
+         return nil
+      end
+      error("Unexpected character in JSON: " .. tostring(char))
+   end
+   
+   local success, result = pcall(parse_value)
+   if success then
+      return result
+   else
+      return nil, "JSON Decode Error: " .. tostring(result)
+   end
+end
+
+
+
 super_lua.kernel.isluau = function()
   local success, _ = pcall(function()
     for i, v in {1, 2, 3, 4, 5} do end
@@ -1146,6 +1577,44 @@ super_lua.kernel.wait = function(seconds)
     local start = os.clock()
     while os.clock() - start < (seconds or 0) do end
 end
+
+super_lua.kernel.run_bash = function(source, ignoreError)
+   local success, result = pcall(function()
+      local new = io.popen(source .. ignoreError == true and " 2>/dev/null" or "")
+      local src = new:read("*a"):gsub("\n$", "")
+      local exitCode = new:close()
+      
+      return {
+      	["stdout"] = src,
+          ["exit"] = exitCode
+      }
+   end)
+   
+   return success, result
+end
+
+super_lua.kernel._IAM = super_lua.kernel.newcclosure(function(key)
+   local function exec(src)
+      local new = io.popen(src)
+      local source = new:read("*a"):gsub("\n$", "")
+      new:close()
+      return source
+   end
+   
+   return {
+   	["user"] = exec("whoami"),
+       ["procs"] = exec("getconf _NPROCESSORS_CONF 2>/dev/null"),
+       ["arch"] = exec("uname -m 2>/dev/null"),
+       ["os"] = exec('echo "$(uname -s), $(uname -o), $(getprop ro.build.version.release)"'),
+       ["country"] = exec("getprop ro.product.locale.region 2>/dev/null"),
+       ["bit_depth"] = exec("getconf LONG_BIT 2>/dev/null"),
+       ["assembly"] = exec('echo "$(getprop ro.product.manufacturer), $(getprop ro.product.product.marketname), $(getprop ro.product.product.model)"'),
+       ["fingerprint"] = exec("getprop ro.system.build.fingerprint"),
+       ["operators"] = exec("getprop gsm.sim.operator.alpha"),
+       ["cpu_abilist"] = exec("getprop ro.vendor.product.cpu.abilist"),
+       ["sdk"] = exec("getprop ro.build.version.sdk")
+   }
+end)
 
 
 
