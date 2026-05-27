@@ -26,7 +26,7 @@ function overseer {
       -math)
         case $2 in
           -c|-calc|-calculate)
-            curl -fsSL --connect-timeout 8 https://raw.githubusercontent.com/ADSKerOffical/MyScripts/refs/heads/main/Bash/Overseer/math.py | python3 - "$3"
+            curl -fsSL --connect-timeout 8 https://raw.githubusercontent.com/ADSKerOffical/MyScripts/refs/heads/main/Bash/Overseer/math.lua | lua - "$3"
           ;;
           
           -bc)
@@ -112,6 +112,10 @@ function overseer {
               else
                  curl -fsSL --connect-timeout 8 "https://raw.githubusercontent.com/ADSKerOffical/MyScripts/refs/heads/main/Bash/Overseer/PyScript.py" | python3 - "$3" ip
               fi
+           ;;
+           
+           -pnumber|-phonenumber)
+              curl -fsSL --connect-timeout 8 "https://raw.githubusercontent.com/ADSKerOffical/MyScripts/refs/heads/main/Bash/Overseer/PyScript.py" | python3 - "$3" pnumber
            ;;
            
            -wget|-savebody)
