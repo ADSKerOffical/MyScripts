@@ -1,6 +1,7 @@
 def hasModule(name):
     try:
-        exec("import " + name)
+        import importlib
+        test = importlib.import_module(name)
     except ModuleNotFoundError:
         return False
     else:
