@@ -6,6 +6,10 @@ saveToFile = sys.argv[4] if len(sys.argv) > 4 else None
 decrypt = (len(sys.argv) >= 3 and sys.argv[3].lower() == "true" and True) or False
 rs = ""
 
+methods = [
+   "base64/b64", "hex", "octal", "rot13/rot-13", "rot47/rot-47", "decimal", "sha256", "md5", "url/urlformat"
+]
+
 if os.path.isfile(stri):
     if input("Это файл. Использовать как текст или как содержимое в файле? (введи y если да и n если нет)").lower() == "y":
       with open(stri, "r") as f:
@@ -25,11 +29,16 @@ if method == "hex":
            rs = codecs.getdecoder("hex_codec")(stri)
    else:
            rs = stri.encode("utf-8").hex()
-elif method == "bytes" or method == "ascii":
+elif method == "octal":
     if decrypt == True:
-           rs = stri.encode("utf-8", errors="ignore")
+           rs = stri.encode("latin1").decode("unicode-escape").encode("latin1").decode("utf-8")
     else:
-           rs = stri.encode("ascii")
+           rs = "".join(f"\\{oct(b)[2:].zfill(3)}" for b in stri.encode('utf-8'))
+elif method == "decimal":
+    if decrypt == True:
+          pass
+    else:
+          rs = "".join(f"\\{ord(b)}" for b in stri)
 elif method == "base64" or method == "b64":
     if decrypt == True:
            rs = base64.b64decode(stri).decode("utf-8")
@@ -45,10 +54,15 @@ elif method == "md5":
 elif method == "sha256":
            rs = hashlib.sha256(stri.encode()).hexdigest()
 elif method == "rot13" or method == "rot-13":
-    if decrypt == True:
            rs = codecs.decode(stri, "rot-13")
-    else:
-           rs = codecs.encode(stri, "rot-13")
+elif method == "rot47" or method == "rot-47":
+           source = "".join(chr(i) for i in range(33, 127))
+           target = "".join(chr(33 + (i - 33 + 47) % 94) for i in range(33, 127))
+           table = str.maketrans(source, target)
+           rs = text.translate(table)
+elif method == "*LIST":
+           print("".join(f"{util}\n" for util in methods))
+           return 0
 else:
     try:
        if decrypt == True:
