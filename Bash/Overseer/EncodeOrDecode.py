@@ -62,7 +62,7 @@ elif method == "rot47" or method == "rot-47":
            rs = text.translate(table)
 elif method == "*LIST":
            print("".join(f"{util}\n" for util in methods))
-           return 0
+           os._exit(0)
 else:
     try:
        if decrypt == True:
