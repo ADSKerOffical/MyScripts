@@ -11,7 +11,8 @@ methods = [
 ]
 
 if os.path.isfile(stri):
-    if input("Это файл. Использовать как текст или как содержимое в файле? (введи y если да и n если нет)").lower() == "y":
+    ahn = input("Это файл. Использовать как текст или как содержимое в файле? (введи y если да и n если нет)").lower()
+    if ahn == "y":
       with open(stri, "r") as f:
           stri = f.read().strip()
     else:
@@ -60,7 +61,7 @@ elif method == "rot47" or method == "rot-47":
            target = "".join(chr(33 + (i - 33 + 47) % 94) for i in range(33, 127))
            table = str.maketrans(source, target)
            rs = text.translate(table)
-elif method == "*LIST":
+elif method == "*list":
            print("".join(f"{util}\n" for util in methods))
            os._exit(0)
 else:
