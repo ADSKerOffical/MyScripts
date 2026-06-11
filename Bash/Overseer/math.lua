@@ -45,6 +45,10 @@ if arg[1] == "CONVERT" then
    }
    
    value = math.max(value, 0)
+
+   for i, v in next, arg do
+     print(i, v)
+   end
    
    if method:lower() == "length" or method:lower() == "size" then
       method = length_rates
@@ -55,6 +59,7 @@ if arg[1] == "CONVERT" then
    elseif method:lower() == "time" or method == "clocks" then
       method = times
    end
+   print(method)
    
    local from_rate = method[from:lower()]
    local to_rate = method[to:lower()]
