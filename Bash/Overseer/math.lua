@@ -1,4 +1,4 @@
-if rawlen(arg) > 2 and arg[1] == "CONVERT" then
+if arg[1] == "CONVERT" then
    local method = arg[2] or "bytes"
    local value = tonumber(arg[3])
    local from = arg[4]
@@ -44,29 +44,28 @@ if rawlen(arg) > 2 and arg[1] == "CONVERT" then
       ce = 3153600000, century = 3153600000
    }
    
-   local input 
    value = math.max(value, 0)
    
    if method:lower() == "length" or method:lower() == "size" then
-      input = length_rates
+      method = length_rates
    elseif method:lower() == "weight" or method == "mass" then
-      input = weight_rates
+      method = weight_rates
    elseif method:lower() == "bytes" then
-      input = bytes
+      method = bytes
    elseif method:lower() == "time" or method == "clocks" then
-      input = times
+      method = times
    end
    
-   local from_rate = input[from:lower()]
-   local to_rate = input[to:lower()]
+   local from_rate = method[from:lower()]
+   local to_rate = method[to:lower()]
    
    if not from_rate or not to_rate then
       print("Неправильное значение или метод")
-      return 
+      return 1
    end
 
    print((value * from_rate) / to_rate)
-   return
+   return 0
 end
 
 local funcs = {
