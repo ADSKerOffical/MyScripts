@@ -1,4 +1,4 @@
-import base64, codecs, binascii, hashlib, urllib.parse, sys, pathlib, os, re, string
+import base64, codecs, binascii, hashlib, urllib.parse, sys, pathlib, os, re, string, zlib
 
 method = sys.argv[1].lower()
 stri = (len(sys.argv) > 2 and sys.argv[2]) or ""
@@ -7,7 +7,7 @@ decrypt = (len(sys.argv) > 3 and sys.argv[3].lower() == "true" and True) or Fals
 rs = ""
 
 methods = [
-   "base64/b64", "hex/base16/b16", "octal", "rot13/rot-13", "rot47/rot-47/rot_47", "decimal", "sha256", "md5", "url/urlformat/base64url", "atbash", "a1z26"
+   "base64/b64", "hex/base16/b16", "octal", "rot13/rot-13", "rot47/rot-47/rot_47", "decimal", "sha256", "md5", "url/urlformat", "atbash", "a1z26", "adler32"
 ]
 
 MORSE_DICT = {
@@ -19,6 +19,12 @@ MORSE_DICT = {
     'Z': '--..',  '1': '.----', '2': '..---', '3': '...--', '4': '....-',
     '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.',
     '0': '-----'
+}
+
+leet_dict = {
+  'A': '4', 'a': '4', 'E': '3', 'e': '3', 'G': '6', 'g': '6',
+  'I': '1', 'i': '1', 'O': '0', 'o': '0', 'S': '5', 's': '5', 'T': '7', 't': '7',
+  "Z": "2", "z": "2", "Q": "9_", "q": "9_", "B": "8", "b": "8"
 }
 
 if os.path.isfile(stri) == True:
@@ -81,9 +87,9 @@ elif method == "octal":
            rs = "".join(f"\\{oct(b)[2:].zfill(3)}" for b in stri.encode('utf-8'))
 elif method == "decimal":
     if decrypt == True:
-          pass
+          rs = re.sub(r"\\(\d+)", lambda m: chr(int(m.group(1))), text)
     else:
-          pass
+          rs = "\\" + "\\".join(str(char) for char in stri.encode("utf-8"))
 elif method == "base64" or method == "b64":
     if decrypt == True:
            rs = base64.b64decode(stri).decode("utf-8")
@@ -94,12 +100,36 @@ elif method == "urlformat" or method == "url" or method == "base64url":
            rs = urllib.parse.unquote(stri)
     else:
            rs = urllib.parse.quote(stri)
+elif method == "adler32":
+           rs = zlib.adler32(stri.encode("utf-8"))
+elif method == "ripemd160":
+            newHash = hashlib.new("ripemd160"); newHash.update(stri.encode("utf-8"))
+            rs = newHash.hexdigest()
+elif method == "uuid4":
+            rs = __import__("uuid").uuid4().hex
+elif method == "uuid7":
+            rs = __import__("uuid").uuid7().hex
+elif method == "leet1337" or method == "leet-1337":
+            rs = stri.translate(str.maketrans(leet_dict))
+elif method == "base85" or method == "b85" or method == "rfc1924":
+     if decrypt == True:
+            rs = base85.b85decode(stri.encode("utf-8")).decode("utf-8")
+     else:
+            rs = base64.b85encode(stri.encode("utf-8")).decode("utf-8")
 elif method == "md5":
            rs = hashlib.md5(stri.encode()).hexdigest()
 elif method == "sha256":
            rs = hashlib.sha256(stri.encode()).hexdigest()
 elif method == "atbash":
-           pass
+    res = []
+    for ch in stri:
+        if ch.islower():
+            res.append(chr(ord('a') + (ord('z') - ord(ch))))
+        elif ch.isupper():
+            res.append(chr(ord('A') + (ord('Z') - ord(ch))))
+        else:
+            res.append(ch)
+    rs = ''.join(res)
 elif method == "a1z26":
      if decrypt == True:
        decoded_chars = []
@@ -117,6 +147,13 @@ elif method == "a1z26":
          rs = "-".join(str(ch) for ch in aman)
 elif method == "rot13" or method == "rot-13" or method == "rot_13":
            rs = codecs.decode(stri, "rot-13")
+elif method == "reverse":
+           rs = stri[::-1]
+elif method == "binary" or method == "bin":
+     if decrypt == True:
+           rs = "".join(chr(int(stri[i:i+8], 2)) for i in range(0, len(stri), 8))
+     else:
+           rs = "".join(format(ord(x), '08b') for x in stri)
 elif method == "rot47" or method == "rot-47" or method == "rot_47":
            source = "".join(chr(i) for i in range(33, 127))
            target = "".join(chr(33 + (i - 33 + 47) % 94) for i in range(33, 127))
