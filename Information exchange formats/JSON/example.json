@@ -1,0 +1,10 @@
+{
+  "json_array": [1, 2, 3, 4, 5],
+  "adsker_name": "Denis",
+  "age": 15,
+  "is_active": true,
+  "json_dict": {
+    "test": true,
+    "aboba": null
+  }
+}
